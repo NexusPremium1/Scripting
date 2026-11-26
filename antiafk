@@ -1,0 +1,30 @@
+
+local Players     = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+local LocalPlayer = Players.LocalPlayer
+
+local env = (getgenv and getgenv()) or _G
+if env.__AntiAFKConn then
+	pcall(function() env.__AntiAFKConn:Disconnect() end)
+	env.__AntiAFKConn = nil
+end
+
+local function pulse()
+	pcall(function()
+		VirtualUser:CaptureController()
+		VirtualUser:ClickButton2(Vector2.new(0, 0))
+	end)
+end
+
+env.__AntiAFKConn = LocalPlayer.Idled:Connect(pulse)
+
+-- Bazı oyunlar idle olayını beklemeden kendi kick'ini atar:
+-- 2 dakikada bir "controller canlı" sinyali (görüntüye/nişana zarar vermez)
+task.spawn(function()
+	while env.__AntiAFKConn do
+		task.wait(120)
+		pcall(function() VirtualUser:CaptureController() end)
+	end
+end)
+
+print("[ANTI-AFK] ✅")
