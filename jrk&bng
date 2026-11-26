@@ -1,0 +1,400 @@
+
+-- Nexus Premium Ultimate Hub (Jerk mid-fix)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+if playerGui:FindFirstChild("NexusPremiumUltimateHub") then
+	playerGui["NexusPremiumUltimateHub"]:Destroy()
+end
+local guiUnlocked = false
+local isMinimized = false
+local isJorking = false
+local jerkTrack = nil
+local running = false
+local originalGravity
+local attachmentLoop
+local animTrack
+local targetPlayer
+
+local function isR15(plr)
+	local char = plr.Character
+	if char and char:FindFirstChildOfClass("Humanoid") then
+		return char:FindFirstChildOfClass("Humanoid").RigType == Enum.HumanoidRigType.R15
+	end
+	return false
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NexusPremiumUltimateHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = playerGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local IntroFrame = Instance.new("Frame")
+IntroFrame.Name = "IntroFrame"
+IntroFrame.Parent = ScreenGui
+IntroFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+IntroFrame.BorderSizePixel = 0
+IntroFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+IntroFrame.Size = UDim2.new(0, 400, 0, 300)
+Instance.new("UICorner", IntroFrame).CornerRadius = UDim.new(0, 15)
+
+local IntroTitle = Instance.new("TextLabel")
+IntroTitle.Parent = IntroFrame
+IntroTitle.BackgroundTransparency = 1
+IntroTitle.Position = UDim2.new(0, 0, 0.15, 0)
+IntroTitle.Size = UDim2.new(1, 0, 0, 60)
+IntroTitle.Font = Enum.Font.GothamBold
+IntroTitle.Text = "NEXUS"
+IntroTitle.TextColor3 = Color3.fromRGB(255, 85, 127)
+IntroTitle.TextSize = 48
+IntroTitle.TextStrokeTransparency = 0.8
+
+local IntroSubtitle = Instance.new("TextLabel")
+IntroSubtitle.Parent = IntroFrame
+IntroSubtitle.BackgroundTransparency = 1
+IntroSubtitle.Position = UDim2.new(0, 0, 0.4, 0)
+IntroSubtitle.Size = UDim2.new(1, 0, 0, 30)
+IntroSubtitle.Font = Enum.Font.Gotham
+IntroSubtitle.Text = "Nexus Premium - Ultimate Hub"
+IntroSubtitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+IntroSubtitle.TextSize = 16
+
+local ContinueButton = Instance.new("TextButton")
+ContinueButton.Parent = IntroFrame
+ContinueButton.BackgroundColor3 = Color3.fromRGB(255, 85, 127)
+ContinueButton.Position = UDim2.new(0.5, -80, 0.65, 0)
+ContinueButton.Size = UDim2.new(0, 160, 0, 45)
+ContinueButton.Font = Enum.Font.GothamBold
+ContinueButton.Text = "CONTINUE"
+ContinueButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ContinueButton.TextSize = 18
+ContinueButton.AutoButtonColor = false
+Instance.new("UICorner", ContinueButton).CornerRadius = UDim.new(0, 10)
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -150)
+MainFrame.Size = UDim2.new(0, 260, 0, 310)
+MainFrame.Visible = false
+MainFrame.BackgroundTransparency = 1
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.ClipsDescendants = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+local TopBar = Instance.new("Frame")
+TopBar.Parent = MainFrame
+TopBar.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+TopBar.BorderSizePixel = 0
+TopBar.Size = UDim2.new(1, 0, 0, 35)
+TopBar.ZIndex = 2
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 12)
+
+local Title = Instance.new("TextLabel")
+Title.Parent = TopBar
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.Size = UDim2.new(1, -45, 1, 0)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "Nexus Premium Hub"
+Title.TextColor3 = Color3.fromRGB(255, 85, 127)
+Title.TextSize = 14
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.ZIndex = 2
+
+local MinButton = Instance.new("TextButton")
+MinButton.Parent = TopBar
+MinButton.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+MinButton.Position = UDim2.new(1, -30, 0, 5)
+MinButton.Size = UDim2.new(0, 25, 0, 25)
+MinButton.Font = Enum.Font.GothamBold
+MinButton.Text = "-"
+MinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinButton.TextSize = 16
+MinButton.ZIndex = 2
+Instance.new("UICorner", MinButton).CornerRadius = UDim.new(0, 6)
+
+local ScrollingContainer = Instance.new("ScrollingFrame")
+ScrollingContainer.Parent = MainFrame
+ScrollingContainer.BackgroundTransparency = 1
+ScrollingContainer.Position = UDim2.new(0, 10, 0, 42)
+ScrollingContainer.Size = UDim2.new(1, -20, 1, -50)
+ScrollingContainer.CanvasSize = UDim2.new(0, 0, 0, 310)
+ScrollingContainer.ScrollBarThickness = 4
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = ScrollingContainer
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 8)
+
+local JerkBtn = Instance.new("TextButton")
+JerkBtn.Parent = ScrollingContainer
+JerkBtn.BackgroundColor3 = Color3.fromRGB(50, 120, 200)
+JerkBtn.Size = UDim2.new(1, 0, 0, 35)
+JerkBtn.Font = Enum.Font.GothamSemibold
+JerkBtn.Text = "Toggle Jerk Off"
+JerkBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+JerkBtn.TextSize = 13
+JerkBtn.LayoutOrder = 1
+Instance.new("UICorner", JerkBtn).CornerRadius = UDim.new(0, 6)
+
+local UsernameBox = Instance.new("TextBox")
+UsernameBox.Parent = ScrollingContainer
+UsernameBox.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+UsernameBox.Size = UDim2.new(1, 0, 0, 32)
+UsernameBox.Font = Enum.Font.Gotham
+UsernameBox.PlaceholderText = "Target's Username..."
+UsernameBox.Text = ""
+UsernameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+UsernameBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+UsernameBox.TextSize = 12
+UsernameBox.ClearTextOnFocus = false
+UsernameBox.LayoutOrder = 2
+Instance.new("UICorner", UsernameBox).CornerRadius = UDim.new(0, 6)
+
+local GetSuckBtn = Instance.new("TextButton")
+GetSuckBtn.Parent = ScrollingContainer
+GetSuckBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
+GetSuckBtn.Size = UDim2.new(1, 0, 0, 35)
+GetSuckBtn.Font = Enum.Font.GothamBold
+GetSuckBtn.Text = "START GET SUCKED"
+GetSuckBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+GetSuckBtn.TextSize = 12
+GetSuckBtn.AutoButtonColor = false
+GetSuckBtn.LayoutOrder = 3
+Instance.new("UICorner", GetSuckBtn).CornerRadius = UDim.new(0, 6)
+
+local BangV2Btn = Instance.new("TextButton")
+BangV2Btn.Parent = ScrollingContainer
+BangV2Btn.BackgroundColor3 = Color3.fromRGB(180, 80, 200)
+BangV2Btn.Size = UDim2.new(1, 0, 0, 35)
+BangV2Btn.Font = Enum.Font.GothamBold
+BangV2Btn.Text = "Start Bang V2"
+BangV2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+BangV2Btn.TextSize = 12
+BangV2Btn.AutoButtonColor = false
+BangV2Btn.LayoutOrder = 4
+Instance.new("UICorner", BangV2Btn).CornerRadius = UDim.new(0, 6)
+
+local GetBangBtn = Instance.new("TextButton")
+GetBangBtn.Parent = ScrollingContainer
+GetBangBtn.BackgroundColor3 = Color3.fromRGB(220, 120, 40)
+GetBangBtn.Size = UDim2.new(1, 0, 0, 35)
+GetBangBtn.Font = Enum.Font.GothamBold
+GetBangBtn.Text = "Start Get Banged"
+GetBangBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+GetBangBtn.TextSize = 12
+GetBangBtn.AutoButtonColor = false
+GetBangBtn.LayoutOrder = 5
+Instance.new("UICorner", GetBangBtn).CornerRadius = UDim.new(0, 6)
+
+local SuckBtn = Instance.new("TextButton")
+SuckBtn.Parent = ScrollingContainer
+SuckBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 100)
+SuckBtn.Size = UDim2.new(1, 0, 0, 35)
+SuckBtn.Font = Enum.Font.GothamBold
+SuckBtn.Text = "Start Suck"
+SuckBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SuckBtn.TextSize = 12
+SuckBtn.AutoButtonColor = false
+SuckBtn.LayoutOrder = 6
+Instance.new("UICorner", SuckBtn).CornerRadius = UDim.new(0, 6)
+
+-- Jerk: loop around mid section of the animation
+JerkBtn.MouseButton1Click:Connect(function()
+	if not guiUnlocked then return end
+	isJorking = not isJorking
+	JerkBtn.BackgroundColor3 = isJorking and Color3.fromRGB(40, 180, 80) or Color3.fromRGB(50, 120, 200)
+	JerkBtn.Text = isJorking and "Toggle Jerk On" or "Toggle Jerk Off"
+
+	if isJorking then
+		task.spawn(function()
+			local char = player.Character
+			local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+			local animtr = humanoid and humanoid:FindFirstChildOfClass("Animator")
+			if not animtr then return end
+
+			while isJorking and char and humanoid and humanoid.Health > 0 do
+				local r15 = isR15(player)
+				if not jerkTrack then
+					local anim = Instance.new("Animation")
+					anim.AnimationId = not r15 and "rbxassetid://72042024" or "rbxassetid://698251653"
+					pcall(function()
+						jerkTrack = animtr:LoadAnimation(anim)
+					end)
+					if jerkTrack then
+						pcall(function()
+							jerkTrack.Priority = Enum.AnimationPriority.Action4
+							jerkTrack.Looped = true
+						end)
+					end
+				end
+				if jerkTrack then
+					if not jerkTrack.IsPlaying then
+						pcall(function()
+							jerkTrack:Play()
+							jerkTrack:AdjustSpeed(r15 and 2.6 or 2.4)
+						end)
+					end
+					-- Seek toward middle of the clip (slightly past midpoint)
+					pcall(function()
+						local len = jerkTrack.Length
+						if len and len > 0 then
+							-- ~45% into the animation = more centered loop feel
+							local mid = len * 0.45
+							if jerkTrack.TimePosition < mid - 0.08 or jerkTrack.TimePosition > mid + 0.35 then
+								jerkTrack.TimePosition = mid
+							end
+						else
+							jerkTrack.TimePosition = 0.42
+						end
+					end)
+				end
+				task.wait(0.05)
+			end
+			if jerkTrack then
+				jerkTrack:Stop()
+				jerkTrack = nil
+			end
+		end)
+	else
+		if jerkTrack then
+			jerkTrack:Stop()
+			jerkTrack = nil
+		end
+	end
+end)
+
+GetSuckBtn.MouseButton1Click:Connect(function()
+	if not guiUnlocked then return end
+	if not running then
+		local victim = UsernameBox.Text:lower()
+		targetPlayer = nil
+		for _, p in pairs(Players:GetPlayers()) do
+			if string.find(p.Name:lower(), victim) or string.find(p.DisplayName:lower(), victim) then
+				targetPlayer = p
+				break
+			end
+		end
+		if targetPlayer and targetPlayer.Character then
+			local char = player.Character
+			local targetChar = targetPlayer.Character
+			local humanoidRootPart = char and char:FindFirstChild("HumanoidRootPart")
+			local targetRootPart = targetChar:FindFirstChild("HumanoidRootPart")
+			if humanoidRootPart and targetRootPart then
+				running = true
+				GetSuckBtn.Text = "STOP GET SUCKED"
+				GetSuckBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+				originalGravity = workspace.Gravity
+				workspace.Gravity = 0
+				task.spawn(function()
+					while running and humanoidRootPart and targetRootPart and humanoidRootPart.Position.Y <= 44 do
+						task.wait()
+						if not running then break end
+						humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.new(0, 1.5, 0)
+					end
+					task.wait(1)
+					if not running then return end
+					attachmentLoop = RunService.Stepped:Connect(function()
+						if running and humanoidRootPart and targetRootPart then
+							humanoidRootPart.CFrame = targetRootPart.CFrame * CFrame.new(0, 2.3, -1.1) * CFrame.Angles(0, math.pi, 0)
+							humanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+						end
+					end)
+					task.wait(1)
+					if not running then return end
+					local r15Check = isR15(player)
+					local animationId = r15Check and "rbxassetid://5918726674" or "rbxassetid://148840371"
+					local animation = Instance.new("Animation")
+					animation.AnimationId = animationId
+					local humanoid = char:FindFirstChildOfClass("Humanoid")
+					if humanoid then
+						local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid
+						pcall(function()
+							animTrack = animator:LoadAnimation(animation)
+							animTrack:Play()
+							animTrack:AdjustSpeed(r15Check and 1 or 3)
+						end)
+					end
+				end)
+			end
+		end
+	else
+		running = false
+		GetSuckBtn.Text = "START GET SUCKED"
+		GetSuckBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
+		if originalGravity then
+			workspace.Gravity = originalGravity
+			originalGravity = nil
+		end
+		if attachmentLoop then
+			attachmentLoop:Disconnect()
+			attachmentLoop = nil
+		end
+		if animTrack then
+			animTrack:Stop()
+			animTrack = nil
+		end
+	end
+end)
+
+BangV2Btn.MouseButton1Click:Connect(function()
+	if not guiUnlocked then return end
+	warn("[Nexus Premium Hub] Bang V2 · offline build — remote fetching disabled")
+end)
+
+GetBangBtn.MouseButton1Click:Connect(function()
+	if not guiUnlocked then return end
+	warn("[Nexus Premium Hub] Get Bang · offline build — remote fetching disabled")
+end)
+
+SuckBtn.MouseButton1Click:Connect(function()
+	if not guiUnlocked then return end
+	warn("[Nexus Premium Hub] Suck · offline build — remote fetching disabled")
+end)
+
+local function openGUI()
+	if not guiUnlocked then return end
+	MainFrame.Visible = true
+	MainFrame.BackgroundTransparency = 0
+	TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Size = UDim2.new(0, 260, 0, 310),
+	}):Play()
+	ScrollingContainer.Visible = true
+	MinButton.Text = "-"
+	isMinimized = false
+end
+
+local function minimizeGUI()
+	isMinimized = true
+	MinButton.Text = "+"
+	ScrollingContainer.Visible = false
+	TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = UDim2.new(0, 260, 0, 35),
+	}):Play()
+end
+
+MinButton.MouseButton1Click:Connect(function()
+	if not guiUnlocked then return end
+	if isMinimized then openGUI() else minimizeGUI() end
+end)
+
+ContinueButton.MouseButton1Click:Connect(function()
+	ContinueButton.BackgroundColor3 = Color3.fromRGB(235, 65, 107)
+	task.wait(0.1)
+	ContinueButton.BackgroundColor3 = Color3.fromRGB(255, 85, 127)
+	IntroFrame:TweenPosition(UDim2.new(0.5, -200, -0.5, 0), "Out", "Back", 0.5, true)
+	task.wait(0.5)
+	IntroFrame.Visible = false
+	guiUnlocked = true
+	MainFrame.Visible = true
+	MainFrame.Size = UDim2.new(0, 260, 0, 35)
+	minimizeGUI()
+	openGUI()
+end)
