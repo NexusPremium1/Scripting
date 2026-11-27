@@ -87706,6 +87706,20 @@ function ESP:Add(obj, kind, labelText, customColor)
 		elseif not existing.FixedColor then
 			existing.Color = self.Colors[kind] or existing.Color
 		end
+		-- Push the NEW colour onto the live visuals (same write-through as
+		-- SetKindColor): Step only repaints colours while Rainbow is on, so a
+		-- green->yellow door re-classification otherwise stayed green forever
+		-- ("numarasiz kapi sari gosterilmiyor").
+		if not self.Settings.Rainbow then
+			local c = existing.Color
+			if existing.Label then existing.Label.TextColor3 = c end
+			if existing.Highlight then
+				existing.Highlight.FillColor = c
+				existing.Highlight.OutlineColor = c
+			end
+			if existing.Tracer then existing.Tracer.Color = c end
+			if existing.Arrow then existing.Arrow.TextColor3 = c end
+		end
 		return existing
 	end
 
@@ -88927,13 +88941,25 @@ local function RunInGameBranch()
 		-- 1. Doors (Real + Locked + Dupe tag!) — ANY depth under CurrentRooms;
 		--    skip inner parts when an ancestor is already named "Door".
 		if n == "Door" and obj.Parent then
-			local inRooms, roomName, isInner = false, nil, false
+			local inRooms, roomName, isInner, isDupe = false, nil, false, false
 			local p = obj.Parent
 			while p and p ~= workspace do
 				if p.Name == "CurrentRooms" then inRooms = true end
 				if p.Name == "Door" then isInner = true end
+				-- The inner shell of a fake door is itself named "Door" and has NO
+				-- ancestor called "Door", so without this check it re-classified the
+				-- dupe as a normal numberless door and overwrote the red entry with
+				-- yellow ("dupeler de sarı").
+				if p.Name == "DoorFake" then isDupe = true end
 				if not roomName and tonumber(p.Name) then roomName = p.Name end
 				p = p.Parent
+			end
+			if isDupe then
+				if Toggles.ESPDoor and Toggles.ESPDoor.Value then
+					local target = obj:FindFirstChild("Door") or obj
+					ESP:Add(target, "Door", "FAKE DOOR [DUPE]", Color3.fromRGB(255, 85, 85))
+				end
+				return
 			end
 			if inRooms and not isInner then
 				if Toggles.ESPDoor and Toggles.ESPDoor.Value then
@@ -88946,20 +88972,24 @@ local function RunInGameBranch()
 					-- The real signal is the plaque ON the door: a TextLabel with digits =>
 					-- numbered; a TextLabel without digits (EXIT / weird / bridge doors)
 					-- => numberless. No readable label at all => room-number fallback.
-					local plateDigits, sawLabel = nil, false
+					local plateDigits = nil
 					for _, d in ipairs(obj:GetDescendants()) do
 						if d:IsA("TextLabel") or d:IsA("TextButton") then
-							sawLabel = true
 							local digits = tostring(d.Text or ""):match("%d+")
 							if digits then plateDigits = digits; break end
 						end
 					end
-					local numbered = plateDigits ~= nil or (not sawLabel and roomNum ~= nil)
+					-- Positive evidence ONLY: digits on the plaque = green. No plaque yet
+					-- or a plaque without digits = yellow (the old roomNum fallback painted
+					-- label-less / numberless doors green and they never turned yellow).
+					local numbered = plateDigits ~= nil
 					local doorColor = numbered and Color3.fromRGB(95, 255, 130) or Color3.fromRGB(255, 255, 85)
 					ESP:Add(target, "Door", lbl, doorColor)
 					-- The door may still be an empty shell (parts / plaque replicate a beat
-					-- later): re-classify shortly so the colour and the ESP both land.
-					if not sawLabel or not obj:FindFirstChildWhichIsA("BasePart", true) then
+					-- later): re-classify shortly so the colour and the ESP both land. Keep
+					-- retrying while the plaque has no digits yet (max 4) - a genuinely
+					-- numberless door just burns the retries and stays yellow.
+					if plateDigits == nil or not obj:FindFirstChildWhichIsA("BasePart", true) then
 						local tries = (obj:GetAttribute("NexusDoorRecheck") or 0) + 1
 						if tries <= 4 then
 							obj:SetAttribute("NexusDoorRecheck", tries)
